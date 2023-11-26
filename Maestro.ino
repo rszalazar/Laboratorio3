@@ -17,21 +17,21 @@
   #include <InfluxDbCloud.h>
   
   // WiFi AP SSID
-  #define WIFI_SSID "wfrre"
+  #define WIFI_SSID "RedLSP"
   // WiFi password
-  #define WIFI_PASSWORD "BityAtomo"
+  #define WIFI_PASSWORD "LSPCOVISA"
 
-  const char *ssid = "wfrre";
-  const char *password = "BityAtomo";
+  const char *ssid = "RedLSP";
+  const char *password = "LSPCOVISA";
 
 // InfluxDB v2 server url, e.g. https://eu-central-1-1.aws.cloud2.influxdata.com (Use: InfluxDB UI -> Load Data -> Client Libraries)
-#define INFLUXDB_URL "http://10.13.25.43:8086/"
+#define INFLUXDB_URL "http://192.168.100.44:8086/"
 // InfluxDB v2 server or cloud API token (Use: InfluxDB UI -> Data -> API Tokens -> <select token>)
-#define INFLUXDB_TOKEN "FIkx_TPHd9V7ODbTiy2qdFib712EjCJTj74pyO0zT386pL0kxcbYJuLb2q7B-JzAFZnGrFC-A5hJww1EOxxnhw=="
+#define INFLUXDB_TOKEN "G9SxjpwRSZ5f8AQpEFMbx--FPniLJOIjqttTT75s_G6kjw9a72us_NxIZm97vEyXu3JzURVDiBVMwxJYsPqD7g=="
 // InfluxDB v2 organization id (Use: InfluxDB UI -> User -> About -> Common Ids )
 #define INFLUXDB_ORG "laboratorio3"
 // InfluxDB v2 bucket name (Use: InfluxDB UI ->  Data -> Buckets)
-#define INFLUXDB_BUCKET "laboratorio"
+#define INFLUXDB_BUCKET "laboratorio3"
 
 // Time zone info
 #define TZ_INFO "UTC-3"
@@ -103,6 +103,7 @@ void loop()
   delay(2000);
   obtener_datos_grupo_1();
   obtener_datos_grupo_2();
+  obtener_datos_grupo_4();
    // Check WiFi connection and reconnect if needed
     if (wifiMulti.run() != WL_CONNECTED) {
       Serial.println("Wifi connection lost");
@@ -192,7 +193,7 @@ text = doc["text"];
 void obtener_datos_grupo_1(){
   WiFiClient client;  // Crea un objeto WiFiClient para usar con HTTPClient
   HTTPClient http;
-  http.begin(client, "http://10.13.26.14:80/"); // Reemplaza "ip_del_servidor" con la IP del ESP8266 servidor
+  http.begin(client, "http://192.168.100.40:80/"); // Reemplaza "ip_del_servidor" con la IP del ESP8266 servidor
   int httpCode = http.GET();
 
   if (httpCode > 0) {
@@ -230,7 +231,7 @@ void obtener_datos_grupo_1(){
 void obtener_datos_grupo_2(){
   WiFiClient client;  // Crea un objeto WiFiClient para usar con HTTPClient
   HTTPClient http;
-  http.begin(client, "http://192.168.0.160/"); // Reemplaza "ip_del_servidor" con la IP de la Raspberry Servidor
+  http.begin(client, "http://192.168.100.46/"); // Reemplaza "ip_del_servidor" con la IP de la Raspberry Servidor
   int httpCode = http.GET();
 
   if (httpCode > 0) {
@@ -242,9 +243,9 @@ void obtener_datos_grupo_2(){
       deserializeJson(jsonDoc, payload);
 
       // Obtener los valores del JSON
-      char *estado_maquina = jsonDoc["estado_maquina"];
-      char *velocidad_maquina = jsonDoc["velocidad_maquina"];
-      char *sensor_proximidad = jsonDoc["sensor_proximidad"];
+      String estado_maquina = jsonDoc["estado_maquina"];
+      float velocidad_maquina = jsonDoc["velocidad_maquina"];
+      String sensor_proximidad = jsonDoc["sensor_prox"];
 
       sensor.addField("estado_maquina", estado_maquina);
       sensor.addField("velocidad_maquina", velocidad_maquina);
@@ -262,6 +263,54 @@ void obtener_datos_grupo_2(){
     }
   } else {
     Serial.println("Error en la solicitud HTTP del Esclavo Raspberry-2");
+  }
+
+  http.end();
+}
+
+void obtener_datos_grupo_4() {
+  WiFiClient client;
+  HTTPClient http;
+  http.begin(client, "http://192.168.100.42:5000/");
+
+  int httpCode = http.GET();
+
+  if (httpCode > 0) {
+    if (httpCode == HTTP_CODE_OK) {
+      String payload = http.getString();
+
+      // Parse the JSON received
+      StaticJsonDocument<200> jsonDoc;
+      DeserializationError error = deserializeJson(jsonDoc, payload);
+
+      if (error) {
+        Serial.print("JSON parsing error: ");
+        Serial.println(error.c_str());
+        return;
+      }
+
+      // Extract values from the JSON
+      int humedad = jsonDoc["humedad"];
+      String sensorValue = jsonDoc["sensor"];
+
+      // Add fields to the JSON document
+      sensor.addField("humedad", humedad);
+      sensor.addField("sensor", sensorValue);
+
+
+      // Print the values
+      Serial.println("Esclavo Raspberry-4 via HTTP");
+      Serial.print("Humedad: ");
+      Serial.println(humedad);
+      Serial.print("Sensor: ");
+      Serial.println(sensorValue);
+      Serial.println("Fin Lectura Esclavo Raspberry-4 via HTTP");
+
+      // Now you can use the sensorReadings JSON document as needed
+      // For example, you can send it to InfluxDB or perform other actions.
+    }
+  } else {
+    Serial.println("Error in HTTP request for Esclavo Raspberry-4");
   }
 
   http.end();
