@@ -102,7 +102,7 @@ void loop()
   if(response != "") DeserializeResponse();
   delay(2000);
   obtener_datos_grupo_1();
-
+  obtener_datos_grupo_2();
    // Check WiFi connection and reconnect if needed
     if (wifiMulti.run() != WL_CONNECTED) {
       Serial.println("Wifi connection lost");
@@ -225,4 +225,44 @@ void obtener_datos_grupo_1(){
 
   http.end();
  
+}
+
+void obtener_datos_grupo_2(){
+  WiFiClient client;  // Crea un objeto WiFiClient para usar con HTTPClient
+  HTTPClient http;
+  http.begin(client, "http://192.168.0.160/"); // Reemplaza "ip_del_servidor" con la IP de la Raspberry Servidor
+  int httpCode = http.GET();
+
+  if (httpCode > 0) {
+    if (httpCode == HTTP_CODE_OK) {
+      String payload = http.getString();
+
+      // Parsear el JSON recibido
+      StaticJsonDocument<200> jsonDoc;
+      deserializeJson(jsonDoc, payload);
+
+      // Obtener los valores del JSON
+      char *estado_maquina = jsonDoc["estado_maquina"];
+      char *velocidad_maquina = jsonDoc["velocidad_maquina"];
+      char *sensor_proximidad = jsonDoc["sensor_proximidad"];
+
+      sensor.addField("estado_maquina", estado_maquina);
+      sensor.addField("velocidad_maquina", velocidad_maquina);
+      sensor.addField("sensor_proximidad", sensor_proximidad);
+
+      // Imprimir los valores
+      Serial.println("Esclavo Raspberry-2 via HTTP");
+      Serial.print("Estado de la Maquina: ");
+      Serial.println(estado_maquina);
+      Serial.print("Velocidad de la Maquina: ");
+      Serial.println(velocidad_maquina);
+      Serial.print("Sensor de Proximidad: ");
+      Serial.println(sensor_proximidad);
+      Serial.println("Fin Lectura Esclavo Raspberry-2 via HTTP");
+    }
+  } else {
+    Serial.println("Error en la solicitud HTTP del Esclavo Raspberry-2");
+  }
+
+  http.end();
 }
